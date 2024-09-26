@@ -1,0 +1,16 @@
+<configuration>
+    <appender name="ROLLING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>/data/data/com.vc.pos/files/logs/log.txt</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- rotate log files every day -->
+            <fileNamePattern>/data/data/com.vc.vcposprintservice/files/logs/log.%d{yyyy-MM-dd}.txt</fileNamePattern>
+            <maxHistory>10</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <root level="debug">
+        <appender-ref ref="ROLLING_FILE" />
+    </root>
+</configuration>

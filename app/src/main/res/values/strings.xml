@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">VCPOS print service</string>
+    <string name="print">Print</string>
+    <string name="foreground_service_sample_notification_channel_general_name">General notification</string>
+    <string name="foreground_service_notification_title">VC POS Print Service</string>
+    <string name="foreground_service_sample_notification_description">Sample app is running in the background.</string>
+    <string name="enter_login">Введите логин</string>
+    <string name="enter_password">Введите пароль</string>
+    <string name="start">Начать</string>
+    <string name="choose_element">Выберите элемент</string>
+    <string name="show_log">Просмотр лога</string>
+    <string name="calendar">Выбор даты</string>
+</resources>
