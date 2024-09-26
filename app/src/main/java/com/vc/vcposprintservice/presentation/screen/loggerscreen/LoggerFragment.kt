@@ -19,6 +19,7 @@ import com.vc.vcposprintservice.R
 import com.vc.vcposprintservice.databinding.FragmentLoggerBinding
 import com.vc.vcposprintservice.presentation.common.ToolBarEnum
 import com.vc.vcposprintservice.presentation.common.ToolBarSettings
+import com.vc.vcposprintservice.utils.collectLatestLifecycleFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,6 +59,8 @@ class LoggerFragment : Fragment() {
         dialog.setCancelable(false)
         addMenu()
         onPositiveButtonDatePickerClicked()
+        collectLoggerState()
+        readFromFile(formattedDate = null)
     }
 
     private fun addMenu() {
@@ -86,6 +89,12 @@ class LoggerFragment : Fragment() {
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Принять") { dialogInterface, i ->
             viewModel.onEvent(event = LoggerEvent.OnDatePicked(datePicker = dialog.datePicker))
             dialogInterface.dismiss()
+        }
+    }
+
+    private fun collectLoggerState() {
+        collectLatestLifecycleFlow(viewModel.state) { state ->
+            readFromFile(formattedDate = state.date)
         }
     }
 

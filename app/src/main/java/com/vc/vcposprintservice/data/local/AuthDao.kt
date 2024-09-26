@@ -5,7 +5,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.vc.vcposprintservice.domain.model.Auth
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AuthDao {

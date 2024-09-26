@@ -1,9 +1,6 @@
 package com.vc.vcposprintservice.di
 
 import com.vc.vcposprintservice.data.network.FileApi
-import com.vc.vcposprintservice.data.repository.FileRepositoryImpl
-import com.vc.vcposprintservice.domain.repository.FileRepository
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

@@ -53,12 +53,10 @@ dependencies {
     implementation(libs.androidx.fragment.ktx)
 
     //Hilt
-    val daggerHiltVersion = "2.48"
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)
 
     //Retrofit
-    val retrofitVersion = "2.9.0"
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
     implementation(libs.retrofit2.kotlinx.serialization.converter)

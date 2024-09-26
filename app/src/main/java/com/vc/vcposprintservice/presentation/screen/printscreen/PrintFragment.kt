@@ -24,7 +24,6 @@ import com.vc.vcposprintservice.databinding.FragmentPrintBinding
 import com.vc.vcposprintservice.domain.model.PrinterDevice
 import com.vc.vcposprintservice.presentation.common.ToolBarEnum
 import com.vc.vcposprintservice.presentation.common.ToolBarSettings
-import com.vc.vcposprintservice.presentation.main.MainActivity
 import com.vc.vcposprintservice.presentation.main.Navigation
 import com.vc.vcposprintservice.presentation.main.ShareViewModel
 import com.vc.vcposprintservice.utils.collectLatestLifecycleFlow

@@ -1,6 +1,5 @@
 package com.vc.vcposprintservice.domain.model
 
-import android.print.PrinterId
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
