@@ -17,6 +17,7 @@ import android.widget.Toast
 import androidx.core.app.ServiceCompat
 import com.vc.vcposprintservice.domain.usecases.GetFiles
 import com.vc.vcposprintservice.domain.usecases.printer.GetPrinter
+import com.vc.vcposprintservice.domain.usecases.servicestate.SaveState
 import com.vc.vcposprintservice.notification.NotificationHelper
 import com.vc.vcposprintservice.utils.Result
 import dagger.hilt.android.AndroidEntryPoint
@@ -46,6 +47,9 @@ class PrintService : Service() {
     @Inject
     lateinit var getPrinter: GetPrinter
 
+    @Inject
+    lateinit var saveState: SaveState
+
     private val coroutineScope = CoroutineScope(Job())
     private var timerJob: Job? = null
     private var serviceJob: Job? = null
@@ -72,11 +76,11 @@ class PrintService : Service() {
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                     Log.d(TAG, "USB device detached")
                     logger.info("USB устройство отключено")
-                    if (usbDevice == intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)) {
-                        Log.d(TAG, "Our printer was detached")
-                        logger.info("Принтер был отключен")
-                        stopPrinting()
-                    }
+//                    if (usbDevice == intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)) {
+                    Log.d(TAG, "Our printer was detached")
+                    logger.info("Принтер был отключен")
+                    stopPrinting()
+//                    }
                 }
 
                 else -> {
@@ -103,6 +107,7 @@ class PrintService : Service() {
     }
 
     private fun start() {
+        saveState(isActive = true)
         NotificationHelper.createNotificationChannel(context = this)
         ServiceCompat.startForeground(
             this,
@@ -235,67 +240,67 @@ class PrintService : Service() {
         manager.requestPermission(usbDevice, permissionIntent)
     }
 
-    private fun setUpCommunication(device: UsbDevice?, filesName: List<String>) {
-        filesName.forEach { fileName ->
-            NotificationHelper.updateNotification(
-                context = this,
-                contentText = "Печать файла $fileName"
-            )
-            val file = File(filesDir, fileName)
-            if (!file.exists()) {
-                logger.error("Файл с именем $fileName не существует")
-                Log.e(TAG, "File with name: $fileName doesn't exist")
-                return
-            }
-            var inputStream: FileInputStream? = null
-            try {
-                inputStream = openFileInput(fileName)
-            } catch (e: IOException) {
-                Log.e(TAG, "Failed to open file $fileName, ${e.message} ", e)
-                logger.error("Ошибка открытия файла $fileName: ${e.message}")
-            }
-            if (device != null && manager.hasPermission(device)) {
-                device.getInterface(0).also { printerInterface ->
-                    printerInterface.getEndpoint(0).also { endpoint ->
-                        manager.openDevice(device)?.apply {
-                            claimInterface(printerInterface, forceClaim)
-                            try {
-                                val buffer = ByteArray(4096)
-                                var bytesRead: Int
-                                while (inputStream?.read(buffer).also {
-                                        bytesRead = it ?: -1
-                                    } != -1) {
-                                    val result = bulkTransfer(endpoint, buffer, bytesRead, TIMEOUT)
-                                    if (result >= 0) {
-                                        Log.d(
-                                            TAG,
-                                            "Данные успешно отправлены: $result байт"
-                                        )
+    private suspend fun setUpCommunication(device: UsbDevice?, filesName: List<String>) {
+        if (device != null && manager.hasPermission(device)) {
+            device.getInterface(0).also { printerInterface ->
+                printerInterface.getEndpoint(0).also { endpoint ->
+                    manager.openDevice(device)?.apply {
+                        claimInterface(printerInterface, forceClaim)
+                        try {
+                            filesName.forEachIndexed { index, fileName ->
+                                NotificationHelper.updateNotification(
+                                    context = this@PrintService,
+                                    contentText = "Печать файла $fileName"
+                                )
+                                val file = File(filesDir, fileName)
+                                if (!file.exists()) {
+                                    logger.error("Файл с именем $fileName не существует")
+                                    Log.e(TAG, "File with name: $fileName doesn't exist")
+                                    return
+                                }
+                                openFileInput(fileName).use { inputStream ->
+                                    val buffer = ByteArray(4096)
+                                    var bytesRead: Int
+                                    while (inputStream?.read(buffer).also {
+                                            bytesRead = it ?: -1
+                                        } != -1) {
+                                        val result =
+                                            bulkTransfer(endpoint, buffer, bytesRead, TIMEOUT)
+                                        if (result >= 0) {
+                                            Log.d(
+                                                TAG,
+                                                "Данные успешно отправлены: $result байт"
+                                            )
+                                        } else {
+                                            Log.e(TAG, "Не удалось отправить данные")
+                                            logger.error("Не удалось отправить данные для файла $fileName")
+                                            break
+                                        }
+                                    }
+                                    logger.info("Файл $fileName успешно отправлен на печать")
+                                    val deleted = file.delete()
+                                    if (deleted) {
+                                        logger.info("Файл $fileName удален")
+                                        println("File $fileName deleted immediately.")
                                     } else {
-                                        Log.e(TAG, "Не удалось отправить данные")
-                                        logger.error("Не удалось отправить данные для файла $fileName")
+                                        logger.error("Ошибка удаления файла $fileName")
+                                        println("Failed $fileName to delete file.")
                                     }
                                 }
-                                logger.info("Файл $fileName успешно отправлен на печать")
-                                val deleted = file.delete()
-                                if (deleted) {
-                                    logger.info("Файл $fileName удален")
-                                    println("File deleted immediately.")
-                                } else {
-                                    logger.error("Ошибка удаления файла $fileName")
-                                    println("Failed to delete file.")
+                                if (index < filesName.size - 1) {
+                                    delay(6000L)
                                 }
-                            } catch (e: IOException) {
-                                Log.e(TAG, "Ошибка чтения файла: ${e.message}")
-                                logger.error("Ошибка чтения файла $fileName: ${e.message}")
-                            } finally {
-                                inputStream?.close()
-                                releaseInterface(printerInterface)
-                                close()
                             }
+                        } catch (e: IOException) {
+                            Log.e(TAG, "Error:a ${e.message} ", e)
+                            logger.error("Ошибка: ${e.message}")
+                        } finally {
+                            releaseInterface(printerInterface)
+                            close()
+                        }
 
-                        } ?: Log.e(TAG, "Не удалось открыть устройство")
-                    }
+
+                    } ?: Log.e(TAG, "Не удалось открыть устройство")
                 }
             }
         }
@@ -303,6 +308,7 @@ class PrintService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        saveState(isActive = false)
         Log.d(TAG, "onDestroy")
 
         timerJob?.cancel()
@@ -315,7 +321,7 @@ class PrintService : Service() {
     }
 
     companion object {
-        private val TIMER_PERIOD_MILISECOND = 30000L
+        private val TIMER_PERIOD_MILISECOND = 120000L
         private const val ACTION_USB_PERMISSION =
             "com.vc.vcposprintservice.presentation.USB_PERMISSION"
 

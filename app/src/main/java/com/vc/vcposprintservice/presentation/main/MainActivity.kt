@@ -48,36 +48,22 @@ class MainActivity : AppCompatActivity(), ToolBarSettings {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+//        enableEdgeToEdge()
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.myToolbar)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.fragment_container)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
         checkAndRequestNotificationPermission()
         collectNavigation()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.print_bar_menu, menu)
-        return true
-    }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean =
-        when (item.itemId) {
-            R.id.action_log -> {
-                viewModel.onEvent(event = Navigation.LoggerScreen)
-                true
-            }
-
-            else -> {
-                super.onOptionsItemSelected(item)
-            }
+    override fun onSupportNavigateUp(): Boolean {
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            viewModel.onEvent(event = Navigation.PopBackStack)
+            return true
         }
-
+        return super.onSupportNavigateUp()
+    }
 
     private fun collectNavigation() {
         collectLatestLifecycleFlow(viewModel.state) { navigation ->
@@ -88,13 +74,37 @@ class MainActivity : AppCompatActivity(), ToolBarSettings {
                 }
 
                 Navigation.StartPrintService -> startPrintService()
-                Navigation.LoggerScreen -> supportFragmentManager.commit {
-                    setReorderingAllowed(true)
-                    replace<LoggerFragment>(R.id.fragment_container)
+                Navigation.LoggerScreen -> {
+                    supportFragmentManager.commit {
+                        setReorderingAllowed(true)
+                        replace<LoggerFragment>(R.id.fragment_container)
+                        addToBackStack(null)
+                    }
+                    supportActionBar?.setDisplayHomeAsUpEnabled(false)
                 }
+
+                Navigation.PopBackStack -> {
+                    supportFragmentManager.popBackStack()
+                    supportActionBar?.setDisplayHomeAsUpEnabled(false)
+                }
+
+                Navigation.Default -> {}
+                Navigation.StopPrintService -> stopPrintService()
             }
 
         }
+    }
+
+    private fun stopPrintService() {
+        val intent = Intent(this, PrintService::class.java).apply {
+            action = PrintService.Action.STOP.toString()
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            ContextCompat.startForegroundService(this, intent)
+        }else{
+            startPrintService()
+        }
+        viewModel.onEvent(event = Navigation.Default)
     }
 
     private fun startPrintService() {
@@ -107,6 +117,7 @@ class MainActivity : AppCompatActivity(), ToolBarSettings {
             startService(intent)
         }
         logger.info("Запуск ${PrintService.Companion::class.java.name} сервиса")
+        viewModel.onEvent(event = Navigation.Default)
         finish()
     }
 

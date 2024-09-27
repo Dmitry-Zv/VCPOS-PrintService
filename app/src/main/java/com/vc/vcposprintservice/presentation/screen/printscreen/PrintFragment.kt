@@ -4,12 +4,17 @@ import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
@@ -18,6 +23,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.vc.vcposprintservice.R
 import com.vc.vcposprintservice.adapter.UsbDeviceAdapter
 import com.vc.vcposprintservice.databinding.FragmentPrintBinding
@@ -27,9 +33,11 @@ import com.vc.vcposprintservice.presentation.common.ToolBarSettings
 import com.vc.vcposprintservice.presentation.main.Navigation
 import com.vc.vcposprintservice.presentation.main.ShareViewModel
 import com.vc.vcposprintservice.utils.collectLatestLifecycleFlow
+import dagger.hilt.android.AndroidEntryPoint
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+@AndroidEntryPoint
 class PrintFragment : Fragment() {
 
     private val logger: Logger = LoggerFactory.getLogger(PrintFragment::class.java)
@@ -39,6 +47,7 @@ class PrintFragment : Fragment() {
     private val viewModel: PrintViewModel by viewModels()
     private val shareViewModel: ShareViewModel by activityViewModels()
     private lateinit var toolBarSettings: ToolBarSettings
+    private var dialogUsbDevices: AlertDialog? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -56,10 +65,17 @@ class PrintFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        toolBarSettings.setUpToolBar(title = "VC POS Print Service", enum = ToolBarEnum.PRINT_FRAGMENT)
+        toolBarSettings.setUpToolBar(
+            title = "VC POS Print Service",
+            enum = ToolBarEnum.PRINT_FRAGMENT
+        )
+        Log.d("PRINT_FRAGMENT", "onViewCreated")
         addMenu()
+        setUpAdapterForCounterExposedTextField()
         checkIfAuthWasSaved()
+        checkIfPrintServiceIsActive()
         checkIfAllFieldsAreFilled()
+        stopService()
         collectState()
     }
 
@@ -82,23 +98,43 @@ class PrintFragment : Fragment() {
                     }
                 }
 
-        })
+        }, viewLifecycleOwner)
+    }
+
+    private fun setUpAdapterForCounterExposedTextField() {
+        val items = listOf(6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18)
+        val adapter = ArrayAdapter(requireContext(), R.layout.item_list, items)
+        binding.counterOfFileExposedTextField.setAdapter(adapter)
     }
 
     private fun checkIfAuthWasSaved() {
         viewModel.onEvent(event = PrintScreenEvent.CheckAuthWasSave)
     }
 
+    private fun checkIfPrintServiceIsActive() {
+        viewModel.onEvent(event = PrintScreenEvent.CheckIfPrintServiceIsActive)
+    }
+
     private fun checkIfAllFieldsAreFilled() {
         binding.buttonStart.setOnClickListener {
+            checkIfPrintServiceIsActive()
             viewModel.onEvent(
                 event = PrintScreenEvent.CheckAuthenticationForm(
                     login = binding.loginEditText.text.toString(),
-                    password = binding.passwordEditText.text.toString()
+                    password = binding.passwordEditText.text.toString(),
+                    counterOfFiles = binding.counterOfFileExposedTextField.text.toString().toInt()
                 )
             )
         }
     }
+
+    private fun stopService() {
+        binding.buttonStop.setOnClickListener {
+            checkIfPrintServiceIsActive()
+            shareViewModel.onEvent(event = Navigation.StopPrintService)
+        }
+    }
+
 
     private fun collectState() {
         collectLatestLifecycleFlow(viewModel.state) { state ->
@@ -109,12 +145,29 @@ class PrintFragment : Fragment() {
             }
             if (state.auth != null) {
                 with(binding) {
-                    loginEditText.setText(state.login)
-                    passwordEditText.setText(state.password)
+                    loginEditText.setText(state.auth.login)
+                    passwordEditText.setText(state.auth.password)
+                    counterOfFileExposedTextField.setText(
+                        state.auth.counterOfFiles.toString(),
+                        false
+                    )
                 }
             }
             if (state.isPrinterDeviceIsSave) {
                 shareViewModel.onEvent(event = Navigation.StartPrintService)
+            }
+            if (state.isPrinterServiceActive != null) {
+                with(binding) {
+                    if (state.isPrinterServiceActive) {
+                        buttonStart.visibility = View.GONE
+                        buttonStop.visibility = View.VISIBLE
+                    } else {
+                        buttonStart.visibility = View.VISIBLE
+                        buttonStop.visibility = View.GONE
+                    }
+//                    buttonStart.isEnabled = !state.isPrinterServiceActive
+//                    buttonStop.isEnabled = state.isPrinterServiceActive
+                }
             }
         }
     }
@@ -133,9 +186,10 @@ class PrintFragment : Fragment() {
 
     private fun showUsbDeviceListDialog(usbDeviceList: List<UsbDevice>) {
         logger.info("Просмотр доступных USB устройств")
-        val dialogView = layoutInflater.inflate(R.layout.dialog_usb_devices, binding.root)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_usb_devices, null)
         val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recyclerView)
         adapter = UsbDeviceAdapter { usbDevice ->
+            dialogUsbDevices?.dismiss()
             saveUsbDevice(usbDevice = usbDevice)
         }
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -143,10 +197,19 @@ class PrintFragment : Fragment() {
 
         adapter.setData(usbDevices = usbDeviceList)
 
-        MaterialAlertDialogBuilder(requireContext())
-            .setView(dialogView)
-            .create()
-            .show()
+        if (usbDeviceList.isNotEmpty()) {
+            dialogUsbDevices = MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogView)
+                .create()
+
+            dialogUsbDevices?.show()
+        } else {
+            Snackbar.make(
+                binding.root,
+                "Отсутствует подключение к USB устройству",
+                Snackbar.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun saveUsbDevice(usbDevice: UsbDevice) {

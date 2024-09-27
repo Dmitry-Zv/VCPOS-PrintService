@@ -10,10 +10,11 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
 
 @HiltViewModel
-class LoggerViewModel : ViewModel(), Event<LoggerEvent> {
+class LoggerViewModel @Inject constructor(): ViewModel(), Event<LoggerEvent> {
 
     private val _state = MutableStateFlow<LoggerState>(LoggerState())
     val state = _state.asStateFlow()

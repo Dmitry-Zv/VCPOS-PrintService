@@ -10,4 +10,5 @@
     <string name="choose_element">Выберите элемент</string>
     <string name="show_log">Просмотр лога</string>
     <string name="calendar">Выбор даты</string>
+    <string name="stop_service">Остановить</string>
 </resources>

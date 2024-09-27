@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-    kotlin("kapt")
+    id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
 }
 
@@ -39,6 +39,9 @@ android {
         jvmTarget = "1.8"
     }
 }
+kapt {
+    correctErrorTypes = true
+}
 
 dependencies {
 
@@ -72,5 +75,6 @@ dependencies {
 
     //Logger
     implementation(libs.slf4j.api)
+    implementation (libs.logback.android)
 
 }

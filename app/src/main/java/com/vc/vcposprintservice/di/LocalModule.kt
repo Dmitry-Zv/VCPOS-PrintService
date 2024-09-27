@@ -1,6 +1,7 @@
 package com.vc.vcposprintservice.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Room
 import com.vc.vcposprintservice.data.local.AuthDao
 import com.vc.vcposprintservice.data.local.PrintServiceDatabase
@@ -14,6 +15,7 @@ import com.vc.vcposprintservice.domain.usecases.printer.GetPrinter
 import com.vc.vcposprintservice.domain.usecases.printer.PrinterUseCases
 import com.vc.vcposprintservice.domain.usecases.printer.SavePrinter
 import com.vc.vcposprintservice.utils.Constants
+import com.vc.vcposprintservice.utils.Constants.PRINT_SERVICE_SHARED_PREFERENCES
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -60,4 +62,10 @@ object LocalModule {
             savePrinter = SavePrinter(repository),
             getPrinter = GetPrinter(repository)
         )
+
+    @Provides
+    @Singleton
+    fun provideServiceStateSharedPreferences(@ApplicationContext context: Context): SharedPreferences =
+        context.getSharedPreferences(PRINT_SERVICE_SHARED_PREFERENCES, Context.MODE_PRIVATE)
+
 }

@@ -8,5 +8,6 @@ data class Auth(
     @PrimaryKey(autoGenerate = false)
     val id: Int,
     val login: String,
-    val password: String
+    val password: String,
+    val counterOfFiles:Int
 )

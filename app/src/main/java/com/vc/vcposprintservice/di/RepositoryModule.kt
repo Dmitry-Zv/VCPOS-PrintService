@@ -3,9 +3,11 @@ package com.vc.vcposprintservice.di
 import com.vc.vcposprintservice.data.repository.AuthRepositoryImpl
 import com.vc.vcposprintservice.data.repository.FileRepositoryImpl
 import com.vc.vcposprintservice.data.repository.PrinterRepositoryImpl
+import com.vc.vcposprintservice.data.repository.ServiceStateRepositoryImpl
 import com.vc.vcposprintservice.domain.repository.AuthRepository
 import com.vc.vcposprintservice.domain.repository.FileRepository
 import com.vc.vcposprintservice.domain.repository.PrinterRepository
+import com.vc.vcposprintservice.domain.repository.ServiceStateRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -27,5 +29,9 @@ interface RepositoryModule {
     @Binds
     @Singleton
     fun bindPrinterRepositoryImpl_toPrinterRepository(printerRepositoryImpl: PrinterRepositoryImpl): PrinterRepository
+
+    @Binds
+    @Singleton
+    fun bindServiceStateRepositoryImpl_toServiceStateRepository(serviceStateRepositoryImpl: ServiceStateRepositoryImpl): ServiceStateRepository
 
 }

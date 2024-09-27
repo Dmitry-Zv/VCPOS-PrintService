@@ -20,6 +20,7 @@ import com.vc.vcposprintservice.databinding.FragmentLoggerBinding
 import com.vc.vcposprintservice.presentation.common.ToolBarEnum
 import com.vc.vcposprintservice.presentation.common.ToolBarSettings
 import com.vc.vcposprintservice.utils.collectLatestLifecycleFlow
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,6 +31,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@AndroidEntryPoint
 class LoggerFragment : Fragment() {
 
     private var _binding: FragmentLoggerBinding? = null
@@ -82,7 +84,7 @@ class LoggerFragment : Fragment() {
                     }
                 }
 
-        })
+        }, viewLifecycleOwner)
     }
 
     private fun onPositiveButtonDatePickerClicked() {
