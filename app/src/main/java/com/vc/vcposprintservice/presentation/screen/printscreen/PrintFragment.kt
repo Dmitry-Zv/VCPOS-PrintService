@@ -4,7 +4,6 @@ import android.content.Context
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -67,7 +66,6 @@ class PrintFragment : Fragment() {
             title = "VC POS Print Service",
             enum = ToolBarEnum.PRINT_FRAGMENT
         )
-        Log.d("PRINT_FRAGMENT", "onViewCreated")
         addMenu()
         setUpAdapterForCounterExposedTextField()
         checkIfAllFieldsAreFilled()

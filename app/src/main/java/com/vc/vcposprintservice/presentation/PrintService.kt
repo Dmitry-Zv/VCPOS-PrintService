@@ -65,7 +65,6 @@ class PrintService : Service() {
                 }
 
                 UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
-                    Log.d(TAG, "USB device attached")
                     logger.info("Usb устройство подключено")
                     serviceJob = CoroutineScope(Dispatchers.IO).launch {
                         checkUsbDeviceList()
@@ -73,17 +72,12 @@ class PrintService : Service() {
                 }
 
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
-                    Log.d(TAG, "USB device detached")
                     logger.info("USB устройство отключено")
-//                    if (usbDevice == intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)) {
-                    Log.d(TAG, "Our printer was detached")
                     logger.info("Принтер был отключен")
                     stopPrinting()
-//                    }
                 }
 
                 else -> {
-                    Log.d(TAG, "permission denied for device ${usbDevice.productName}")
                     logger.info("Разрешение запрещено для устройства ${usbDevice.productName}")
                 }
             }
@@ -144,7 +138,6 @@ class PrintService : Service() {
                         )
                     )) {
                         is Result.Error -> {
-                            Log.e(TAG, result.exception.message, result.exception)
                             logger.error(result.exception.message)
                             NotificationHelper.updateNotification(
                                 context = this@PrintService,
@@ -157,21 +150,9 @@ class PrintService : Service() {
                             filesName = result.data
                         )
                     }
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@PrintService,
-                            "Foreground Service still running!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                    }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Ошибка во время выполнения задачи: ${e.message}")
+                    Log.e(TAG, "Ошибка во время выполнения задачи: ${e.message}", e)
                     logger.error("Ошибка во время выполнения задачи: ${e.message}")
-                    NotificationHelper.updateNotification(
-                        context = this@PrintService,
-                        contentText = "Error: ${e.message}"
-                    )
                 }
 
                 delay(TIMER_PERIOD_MILISECOND)
@@ -184,18 +165,16 @@ class PrintService : Service() {
         timerJob?.cancel()
         logger.info("Печать прекращена")
         NotificationHelper.updateNotification(this, "Печать прекращена")
-        Log.d(TAG, "Printing stopped due to device detachment")
     }
 
     private suspend fun checkUsbDeviceList() {
         manager = getSystemService(Context.USB_SERVICE) as UsbManager
         val deviceList = manager.deviceList
         when (val result = getPrinter()) {
-            is Result.Error -> Log.e(TAG, result.exception.message, result.exception)
+            is Result.Error -> logger.error(result.exception.message)
             is Result.Success -> {
                 val printerDevice = result.data
                 deviceList.values.forEach { device ->
-                    Log.d("USB_SERVICE", "Найдено устройство: ${device.productName}")
                     if (
                         printerDevice.productName == device.productName &&
                         printerDevice.manufactureName == device.manufacturerName
@@ -225,7 +204,7 @@ class PrintService : Service() {
         try {
             unregisterReceiver(usbReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.e(TAG, "Receiver was not registered: ${e.message}")
+            logger.error("Receiver was not registered: ${e.message}")
         }
     }
 
@@ -252,7 +231,6 @@ class PrintService : Service() {
                                 val file = File(filesDir, fileName)
                                 if (!file.exists()) {
                                     logger.error("Файл с именем $fileName не существует")
-                                    Log.e(TAG, "File with name: $fileName doesn't exist")
                                     return
                                 }
                                 openFileInput(fileName).use { inputStream ->
