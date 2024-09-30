@@ -6,13 +6,10 @@ sealed class PrintScreenEvent {
     data class CheckAuthenticationForm(
         val login: String,
         val password: String,
-        val counterOfFiles:Int
+        val counterOfFiles: String
     ) : PrintScreenEvent()
-
-    data object CheckAuthWasSave : PrintScreenEvent()
 
     data class SavePrinter(val printerDevice: PrinterDevice) : PrintScreenEvent()
 
-    data object CheckIfPrintServiceIsActive:PrintScreenEvent()
-
+    data object PerformDefault:PrintScreenEvent()
 }

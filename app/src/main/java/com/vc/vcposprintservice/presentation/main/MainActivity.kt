@@ -3,6 +3,7 @@ package com.vc.vcposprintservice.presentation.main
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -37,16 +38,16 @@ class MainActivity : AppCompatActivity(), ToolBarSettings {
             } else {
                 logger.info("Разрешение POST_NOTIFICATIONS отклоненно")
             }
-            // if permission was denied, the service can still run only the notification won't be visible
         }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
+        enableEdgeToEdge()
         _binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.myToolbar)
+        logger.info("......MainActivity started.....")
         checkAndRequestNotificationPermission()
         collectNavigation()
     }
@@ -94,9 +95,9 @@ class MainActivity : AppCompatActivity(), ToolBarSettings {
         val intent = Intent(this, PrintService::class.java).apply {
             action = PrintService.Action.STOP.toString()
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             ContextCompat.startForegroundService(this, intent)
-        }else{
+        } else {
             startPrintService()
         }
         viewModel.onEvent(event = Navigation.Default)

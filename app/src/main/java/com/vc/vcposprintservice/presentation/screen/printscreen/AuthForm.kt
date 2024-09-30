@@ -7,14 +7,15 @@ data class AuthForm(
     val password: String = "",
     val loginError: String? = null,
     val passwordError: String? = null,
+    val counterOfFilesError: String? = null,
     val auth: Auth? = null,
     val isPrinterDeviceIsSave: Boolean = false,
-    val isPrinterServiceActive: Boolean? = null
 ) {
     companion object {
         val default = AuthForm(
             "",
             "",
+            null,
             null,
             null,
             null,

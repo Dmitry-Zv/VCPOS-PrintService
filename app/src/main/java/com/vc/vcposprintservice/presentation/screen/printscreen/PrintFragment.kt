@@ -70,11 +70,10 @@ class PrintFragment : Fragment() {
         Log.d("PRINT_FRAGMENT", "onViewCreated")
         addMenu()
         setUpAdapterForCounterExposedTextField()
-        checkIfAuthWasSaved()
-        checkIfPrintServiceIsActive()
         checkIfAllFieldsAreFilled()
         stopService()
         collectState()
+        collectServiceState()
     }
 
     private fun addMenu() {
@@ -105,22 +104,17 @@ class PrintFragment : Fragment() {
         binding.counterOfFileExposedTextField.setAdapter(adapter)
     }
 
-    private fun checkIfAuthWasSaved() {
-        viewModel.onEvent(event = PrintScreenEvent.CheckAuthWasSave)
-    }
-
-    private fun checkIfPrintServiceIsActive() {
-        viewModel.onEvent(event = PrintScreenEvent.CheckIfPrintServiceIsActive)
-    }
+//    private fun checkIfAuthWasSaved() {
+//        viewModel.onEvent(event = PrintScreenEvent.CheckAuthWasSave)
+//    }
 
     private fun checkIfAllFieldsAreFilled() {
         binding.buttonStart.setOnClickListener {
-            checkIfPrintServiceIsActive()
             viewModel.onEvent(
                 event = PrintScreenEvent.CheckAuthenticationForm(
                     login = binding.loginEditText.text.toString(),
                     password = binding.passwordEditText.text.toString(),
-                    counterOfFiles = binding.counterOfFileExposedTextField.text.toString().toInt()
+                    counterOfFiles = binding.counterOfFileExposedTextField.text.toString()
                 )
             )
         }
@@ -128,7 +122,6 @@ class PrintFragment : Fragment() {
 
     private fun stopService() {
         binding.buttonStop.setOnClickListener {
-            checkIfPrintServiceIsActive()
             shareViewModel.onEvent(event = Navigation.StopPrintService)
         }
     }
@@ -138,7 +131,9 @@ class PrintFragment : Fragment() {
         collectLatestLifecycleFlow(viewModel.state) { state ->
             binding.loginLayout.error = state.loginError
             binding.passwordLayout.error = state.passwordError
+            binding.exposedLayout.error = state.counterOfFilesError
             if (state.login.isNotBlank() && state.password.isNotBlank()) {
+                viewModel.onEvent(event = PrintScreenEvent.PerformDefault)
                 checkUsbDeviceList()
             }
             if (state.auth != null) {
@@ -154,17 +149,18 @@ class PrintFragment : Fragment() {
             if (state.isPrinterDeviceIsSave) {
                 shareViewModel.onEvent(event = Navigation.StartPrintService)
             }
-            if (state.isPrinterServiceActive != null) {
-                with(binding) {
-                    if (state.isPrinterServiceActive) {
-                        buttonStart.visibility = View.GONE
-                        buttonStop.visibility = View.VISIBLE
-                    } else {
-                        buttonStart.visibility = View.VISIBLE
-                        buttonStop.visibility = View.GONE
-                    }
-//                    buttonStart.isEnabled = !state.isPrinterServiceActive
-//                    buttonStop.isEnabled = state.isPrinterServiceActive
+        }
+    }
+
+    private fun collectServiceState() {
+        collectLatestLifecycleFlow(viewModel.prefState) { state ->
+            with(binding) {
+                if (state) {
+                    buttonStart.visibility = View.GONE
+                    buttonStop.visibility = View.VISIBLE
+                } else {
+                    buttonStart.visibility = View.VISIBLE
+                    buttonStop.visibility = View.GONE
                 }
             }
         }

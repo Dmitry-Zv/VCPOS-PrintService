@@ -127,8 +127,6 @@ class PrintService : Service() {
         serviceJob = CoroutineScope(Dispatchers.IO).launch {
             checkUsbDeviceList()
         }
-//        manager.hasPermission(usbDevice)
-//        startPrinting()
     }
 
     private fun startPrinting() {
@@ -184,6 +182,8 @@ class PrintService : Service() {
 
     private fun stopPrinting() {
         timerJob?.cancel()
+        logger.info("Печать прекращена")
+        NotificationHelper.updateNotification(this, "Печать прекращена")
         Log.d(TAG, "Printing stopped due to device detachment")
     }
 
@@ -197,8 +197,6 @@ class PrintService : Service() {
                 deviceList.values.forEach { device ->
                     Log.d("USB_SERVICE", "Найдено устройство: ${device.productName}")
                     if (
-                        printerDevice.deviceId == device.deviceId &&
-                        printerDevice.vendorId == device.vendorId &&
                         printerDevice.productName == device.productName &&
                         printerDevice.manufactureName == device.manufacturerName
                     ) {

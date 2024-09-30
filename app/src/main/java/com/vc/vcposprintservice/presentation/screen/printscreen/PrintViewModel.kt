@@ -19,12 +19,17 @@ import javax.inject.Inject
 class PrintViewModel @Inject constructor(
     private val authUseCases: AuthUseCases,
     private val printerUseCases: PrinterUseCases,
-    private val getState: GetState
+    getState: GetState
 ) : ViewModel(), Event<PrintScreenEvent> {
 
 
     private val _state = MutableStateFlow(AuthForm.default)
     val state = _state.asStateFlow()
+    val prefState = getState()
+
+    init {
+        checkAuthWasSave()
+    }
 
     override fun onEvent(event: PrintScreenEvent) {
         when (event) {
@@ -34,14 +39,9 @@ class PrintViewModel @Inject constructor(
                 counterOfFiles = event.counterOfFiles
             )
 
-            PrintScreenEvent.CheckAuthWasSave -> checkAuthWasSave()
             is PrintScreenEvent.SavePrinter -> savePrinter(printerDevice = event.printerDevice)
-            PrintScreenEvent.CheckIfPrintServiceIsActive -> checkIfPrintServiceIsActive()
+            PrintScreenEvent.PerformDefault -> _state.value = AuthForm.default
         }
-    }
-
-    private fun performDefault() {
-        _state.value = AuthForm.default
     }
 
     private fun checkAuthWasSave() {
@@ -53,11 +53,10 @@ class PrintViewModel @Inject constructor(
 
                 is Result.Success -> _state.value = AuthForm(auth = result.data)
             }
-//            performDefault()
         }
     }
 
-    private fun checkAuthenticationForm(login: String, password: String, counterOfFiles: Int) {
+    private fun checkAuthenticationForm(login: String, password: String, counterOfFiles: String) {
         viewModelScope.launch {
             if (login.isBlank()) {
                 _state.value = AuthForm(loginError = "Поле логина пустое")
@@ -67,16 +66,20 @@ class PrintViewModel @Inject constructor(
                 _state.value = AuthForm(passwordError = "Поле пароля пустое")
                 return@launch
             }
+            if (counterOfFiles.isBlank()) {
+                _state.value =
+                    AuthForm(counterOfFilesError = "Выберите количетсво запрашиваемых записей")
+                return@launch
+            }
             authUseCases.saveAuth(
                 auth = Auth(
                     id = 1,
                     login = login,
                     password = password,
-                    counterOfFiles = counterOfFiles
+                    counterOfFiles = counterOfFiles.toInt()
                 )
             )
             _state.value = AuthForm(login = login, password = password)
-//            performDefault()
         }
 
     }
@@ -85,13 +88,7 @@ class PrintViewModel @Inject constructor(
         viewModelScope.launch {
             printerUseCases.savePrinter(printerDevice = printerDevice)
             _state.value = AuthForm(isPrinterDeviceIsSave = true)
-//            performDefault()
         }
     }
-
-    private fun checkIfPrintServiceIsActive() {
-        _state.value = AuthForm(isPrinterServiceActive = getState())
-    }
-
 
 }
