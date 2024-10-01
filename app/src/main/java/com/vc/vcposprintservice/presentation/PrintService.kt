@@ -152,7 +152,7 @@ class PrintService : Service() {
                                 auth = auth.data
                             )) {
                                 is Result.Error -> {
-                                    logger.error(result.exception.message)
+                                    logger.error("Ошибка получения файлов: ${result.exception.message}")
                                     Log.e(TAG, result.exception.message, result.exception)
                                     NotificationHelper.updateNotification(
                                         context = this@PrintService,
@@ -246,7 +246,7 @@ class PrintService : Service() {
                                     GET_FILE_STATUS
                                 )) {
                                     is Result.Error -> logger.error(
-                                        result.exception.message ?: "Unknown error"
+                                        "Ошибка отправки статуса 2: ${result.exception.message ?: "Unknown error"} "
                                     )
 
                                     is Result.Success -> {}
@@ -285,7 +285,7 @@ class PrintService : Service() {
                                         PRINT_FILE_STATUS
                                     )) {
                                         is Result.Error -> logger.error(
-                                            result.exception.message ?: "Unknown error"
+                                            "Ошибка отправки статуса 3: ${result.exception.message ?: "Unknown error"} "
                                         )
 
                                         is Result.Success -> {}
