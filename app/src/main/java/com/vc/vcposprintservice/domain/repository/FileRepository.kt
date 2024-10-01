@@ -6,5 +6,7 @@ import com.vc.vcposprintservice.utils.Result
 
 interface FileRepository {
 
-    suspend fun getFiles(postAuth: PostAuth): Result<List<FileResponse>>
+    suspend fun getFiles(postAuth: PostAuth, counterOfFiles: Int): Result<List<FileResponse>>
+
+    suspend fun putStatus(fileId: Int, statusId: Int): Result<Unit>
 }

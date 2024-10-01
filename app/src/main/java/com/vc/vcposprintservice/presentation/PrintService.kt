@@ -15,7 +15,9 @@ import android.printservice.PrintService
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ServiceCompat
-import com.vc.vcposprintservice.domain.usecases.GetFiles
+import com.vc.vcposprintservice.domain.usecases.fileusecases.GetFiles
+import com.vc.vcposprintservice.domain.usecases.auth.GetAuth
+import com.vc.vcposprintservice.domain.usecases.fileusecases.FileUseCases
 import com.vc.vcposprintservice.domain.usecases.printer.GetPrinter
 import com.vc.vcposprintservice.domain.usecases.servicestate.SaveState
 import com.vc.vcposprintservice.notification.NotificationHelper
@@ -41,7 +43,10 @@ class PrintService : Service() {
     private val logger: Logger = LoggerFactory.getLogger(PrintService::class.java)
 
     @Inject
-    lateinit var getFiles: GetFiles
+    lateinit var getAuth: GetAuth
+
+    @Inject
+    lateinit var fileUseCases: FileUseCases
 
     @Inject
     lateinit var getPrinter: GetPrinter
@@ -132,23 +137,35 @@ class PrintService : Service() {
                         context = this@PrintService,
                         contentText = "Получение файлов..."
                     )
-                    when (val result = getFiles(
-                        context = this@PrintService, assetsFileNames = listOf(
-                            "1", "3.SPL", "17.SPL"
-                        )
-                    )) {
+                    when (val auth = getAuth()) {
                         is Result.Error -> {
-                            logger.error(result.exception.message)
+                            logger.error(auth.exception.message)
                             NotificationHelper.updateNotification(
                                 context = this@PrintService,
-                                contentText = "Error: ${result.exception.message}"
+                                contentText = "Error: ${auth.exception.message}"
                             )
                         }
 
-                        is Result.Success -> setUpCommunication(
-                            device = usbDevice,
-                            filesName = result.data
-                        )
+                        is Result.Success -> {
+                            when (val result = fileUseCases.getFiles(
+                                this@PrintService,
+                                auth = auth.data
+                            )) {
+                                is Result.Error -> {
+                                    logger.error(result.exception.message)
+                                    Log.e(TAG, result.exception.message, result.exception)
+                                    NotificationHelper.updateNotification(
+                                        context = this@PrintService,
+                                        contentText = "Error: ${result.exception.message}"
+                                    )
+                                }
+
+                                is Result.Success -> setUpCommunication(
+                                    device = usbDevice,
+                                    filesNameWithId = result.data
+                                )
+                            }
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Ошибка во время выполнения задачи: ${e.message}", e)
@@ -216,24 +233,34 @@ class PrintService : Service() {
         manager.requestPermission(usbDevice, permissionIntent)
     }
 
-    private suspend fun setUpCommunication(device: UsbDevice?, filesName: List<String>) {
+    private suspend fun setUpCommunication(device: UsbDevice?, filesNameWithId: Map<Int, String>) {
         if (device != null && manager.hasPermission(device)) {
             device.getInterface(0).also { printerInterface ->
                 printerInterface.getEndpoint(0).also { endpoint ->
                     manager.openDevice(device)?.apply {
                         claimInterface(printerInterface, forceClaim)
                         try {
-                            filesName.forEachIndexed { index, fileName ->
+                            filesNameWithId.entries.forEachIndexed { index, fileNameWithId ->
+                                when (val result = fileUseCases.putStatus(
+                                    fileId = fileNameWithId.key,
+                                    GET_FILE_STATUS
+                                )) {
+                                    is Result.Error -> logger.error(
+                                        result.exception.message ?: "Unknown error"
+                                    )
+
+                                    is Result.Success -> {}
+                                }
                                 NotificationHelper.updateNotification(
                                     context = this@PrintService,
-                                    contentText = "Печать файла $fileName"
+                                    contentText = "Печать файла ${fileNameWithId.value}"
                                 )
-                                val file = File(filesDir, fileName)
+                                val file = File(filesDir, fileNameWithId.value)
                                 if (!file.exists()) {
-                                    logger.error("Файл с именем $fileName не существует")
+                                    logger.error("Файл с именем ${fileNameWithId.value} не существует")
                                     return
                                 }
-                                openFileInput(fileName).use { inputStream ->
+                                openFileInput(fileNameWithId.value).use { inputStream ->
                                     val buffer = ByteArray(4096)
                                     var bytesRead: Int
                                     while (inputStream?.read(buffer).also {
@@ -248,21 +275,31 @@ class PrintService : Service() {
                                             )
                                         } else {
                                             Log.e(TAG, "Не удалось отправить данные")
-                                            logger.error("Не удалось отправить данные для файла $fileName")
+                                            logger.error("Не удалось отправить данные для файла ${fileNameWithId.value}")
                                             break
                                         }
                                     }
-                                    logger.info("Файл $fileName успешно отправлен на печать")
+                                    logger.info("Файл ${fileNameWithId.value} успешно отправлен на печать")
+                                    when (val result = fileUseCases.putStatus(
+                                        fileId = fileNameWithId.key,
+                                        PRINT_FILE_STATUS
+                                    )) {
+                                        is Result.Error -> logger.error(
+                                            result.exception.message ?: "Unknown error"
+                                        )
+
+                                        is Result.Success -> {}
+                                    }
                                     val deleted = file.delete()
                                     if (deleted) {
-                                        logger.info("Файл $fileName удален")
-                                        println("File $fileName deleted immediately.")
+                                        logger.info("Файл ${fileNameWithId.value} удален")
+                                        println("File ${fileNameWithId.value} deleted immediately.")
                                     } else {
-                                        logger.error("Ошибка удаления файла $fileName")
-                                        println("Failed $fileName to delete file.")
+                                        logger.error("Ошибка удаления файла ${fileNameWithId.value}")
+                                        println("Failed ${fileNameWithId.value} to delete file.")
                                     }
                                 }
-                                if (index < filesName.size - 1) {
+                                if (index < filesNameWithId.size - 1) {
                                     delay(6000L)
                                 }
                             }
@@ -302,5 +339,7 @@ class PrintService : Service() {
 
         private const val TAG = "USB_HOST_API"
         private const val TIMEOUT = 0
+        private const val GET_FILE_STATUS = 2
+        private const val PRINT_FILE_STATUS = 3
     }
 }

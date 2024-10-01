@@ -1,6 +1,7 @@
 package com.vc.vcposprintservice.presentation.screen.printscreen
 
 import android.content.Context
+import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Bundle
@@ -102,10 +103,6 @@ class PrintFragment : Fragment() {
         binding.counterOfFileExposedTextField.setAdapter(adapter)
     }
 
-//    private fun checkIfAuthWasSaved() {
-//        viewModel.onEvent(event = PrintScreenEvent.CheckAuthWasSave)
-//    }
-
     private fun checkIfAllFieldsAreFilled() {
         binding.buttonStart.setOnClickListener {
             viewModel.onEvent(
@@ -186,10 +183,12 @@ class PrintFragment : Fragment() {
         }
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
+        val filteredList = usbDeviceList.filter { usbDevice ->
+            usbDevice.getInterface(0).interfaceClass == UsbConstants.USB_CLASS_PRINTER
+        }
+        adapter.setData(usbDevices = filteredList)
 
-        adapter.setData(usbDevices = usbDeviceList)
-
-        if (usbDeviceList.isNotEmpty()) {
+        if (filteredList.isNotEmpty()) {
             dialogUsbDevices = MaterialAlertDialogBuilder(requireContext())
                 .setView(dialogView)
                 .create()

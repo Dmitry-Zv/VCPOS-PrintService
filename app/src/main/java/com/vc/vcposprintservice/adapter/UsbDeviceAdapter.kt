@@ -1,5 +1,6 @@
 package com.vc.vcposprintservice.adapter
 
+import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -18,7 +19,15 @@ class UsbDeviceAdapter(
         ViewHolder(binding.root) {
         fun bind(usbDevice: UsbDevice) {
             with(binding) {
-                usbClassImage.setImageResource(R.drawable.ic_print_status_icon)
+                when (usbDevice.getInterface(0).interfaceClass) {
+                    UsbConstants.USB_CLASS_AUDIO -> usbClassImage.setImageResource(R.drawable.audio)
+                    UsbConstants.USB_CLASS_HID -> usbClassImage.setImageResource(R.drawable.mouse_keyboard)
+                    UsbConstants.USB_CLASS_PRINTER -> usbClassImage.setImageResource(R.drawable.ic_print_status_icon)
+                    UsbConstants.USB_CLASS_PER_INTERFACE -> usbClassImage.setImageResource(R.drawable.ic_print_status_icon)
+                    UsbConstants.USB_CLASS_MASS_STORAGE -> usbClassImage.setImageResource(R.drawable.usb_storage)
+                    UsbConstants.USB_CLASS_COMM -> usbClassImage.setImageResource(R.drawable.scales)
+                    else -> usbClassImage.setImageResource(R.drawable.usb_devices)
+                }
                 manufactureName.text = usbDevice.manufacturerName
                 usbProductName.text = usbDevice.productName
                 itemView.setOnClickListener {

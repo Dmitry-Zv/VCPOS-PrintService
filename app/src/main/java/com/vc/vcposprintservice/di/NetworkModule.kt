@@ -1,6 +1,12 @@
 package com.vc.vcposprintservice.di
 
+import com.google.gson.GsonBuilder
 import com.vc.vcposprintservice.data.network.FileApi
+import com.vc.vcposprintservice.domain.repository.FileRepository
+import com.vc.vcposprintservice.domain.usecases.fileusecases.FileUseCases
+import com.vc.vcposprintservice.domain.usecases.fileusecases.GetFiles
+import com.vc.vcposprintservice.domain.usecases.fileusecases.PutStatus
+import com.vc.vcposprintservice.utils.ByteArrayDeserializer
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,15 +37,28 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient): Retrofit =
-        Retrofit.Builder()
-            .baseUrl("http://localhost:19128/api/v1/")
-            .addConverterFactory(GsonConverterFactory.create())
+    fun provideRetrofit(client: OkHttpClient): Retrofit {
+        val gson = GsonBuilder()
+            .registerTypeAdapter(ByteArray::class.java, ByteArrayDeserializer())
+            .create()
+
+        return Retrofit.Builder()
+            .baseUrl("http://192.168.31.212:19128/api/v1/")
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .client(client)
             .build()
+    }
 
     @Provides
     @Singleton
     fun provideFileApi(retrofit: Retrofit): FileApi =
         retrofit.create(FileApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideFileUseCases(repository: FileRepository) =
+        FileUseCases(
+            getFiles = GetFiles(repository),
+            putStatus = PutStatus(repository)
+        )
 }
