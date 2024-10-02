@@ -120,6 +120,7 @@ class PrintService : Service() {
                 0
             }
         )
+        logger.info("PrintService начал свою работу...")
 
         registerUsbReceiver()
 
@@ -137,6 +138,7 @@ class PrintService : Service() {
                         context = this@PrintService,
                         contentText = "Получение файлов..."
                     )
+                    logger.info("Получение файлов...")
                     when (val auth = getAuth()) {
                         is Result.Error -> {
                             logger.error(auth.exception.message)
@@ -255,9 +257,10 @@ class PrintService : Service() {
                                     context = this@PrintService,
                                     contentText = "Печать файла ${fileNameWithId.value}"
                                 )
+                                logger.info("Печать файла \"${fileNameWithId.value}\"")
                                 val file = File(filesDir, fileNameWithId.value)
                                 if (!file.exists()) {
-                                    logger.error("Файл с именем ${fileNameWithId.value} не существует")
+                                    logger.error("Файл с именем \"${fileNameWithId.value}\" не существует")
                                     return
                                 }
                                 openFileInput(fileNameWithId.value).use { inputStream ->
@@ -275,11 +278,11 @@ class PrintService : Service() {
                                             )
                                         } else {
                                             Log.e(TAG, "Не удалось отправить данные")
-                                            logger.error("Не удалось отправить данные для файла ${fileNameWithId.value}")
+                                            logger.error("Не удалось отправить данные для файла \"${fileNameWithId.value}\"")
                                             break
                                         }
                                     }
-                                    logger.info("Файл ${fileNameWithId.value} успешно отправлен на печать")
+                                    logger.info("Файл \"${fileNameWithId.value}\" успешно отправлен на печать")
                                     when (val result = fileUseCases.putStatus(
                                         fileId = fileNameWithId.key,
                                         PRINT_FILE_STATUS
@@ -292,10 +295,10 @@ class PrintService : Service() {
                                     }
                                     val deleted = file.delete()
                                     if (deleted) {
-                                        logger.info("Файл ${fileNameWithId.value} удален")
-                                        println("File ${fileNameWithId.value} deleted immediately.")
+                                        logger.info("Файл \"${fileNameWithId.value}\" удален")
+                                        println("File \"${fileNameWithId.value}\" deleted immediately.")
                                     } else {
-                                        logger.error("Ошибка удаления файла ${fileNameWithId.value}")
+                                        logger.error("Ошибка удаления файла \"${fileNameWithId.value}\"")
                                         println("Failed ${fileNameWithId.value} to delete file.")
                                     }
                                 }
