@@ -197,7 +197,7 @@ class PrintFragment : Fragment() {
         } else {
             Snackbar.make(
                 binding.root,
-                "Отсутствует подключение к USB устройству",
+                "Отсутствует подключение USB принтера к ПК",
                 Snackbar.LENGTH_SHORT
             ).show()
         }
