@@ -242,69 +242,82 @@ class PrintService : Service() {
                     manager.openDevice(device)?.apply {
                         claimInterface(printerInterface, forceClaim)
                         try {
-                            filesNameWithId.entries.forEachIndexed { index, fileNameWithId ->
-                                when (val result = fileUseCases.putStatus(
-                                    fileId = fileNameWithId.key,
-                                    GET_FILE_STATUS
-                                )) {
-                                    is Result.Error -> logger.error(
-                                        "Ошибка отправки статуса 2: ${result.exception.message ?: "Unknown error"} "
-                                    )
-
-                                    is Result.Success -> {}
-                                }
-                                NotificationHelper.updateNotification(
-                                    context = this@PrintService,
-                                    contentText = "Печать файла ${fileNameWithId.value}"
-                                )
-                                logger.info("Печать файла \"${fileNameWithId.value}\"")
-                                val file = File(filesDir, fileNameWithId.value)
-                                if (!file.exists()) {
-                                    logger.error("Файл с именем \"${fileNameWithId.value}\" не существует")
-                                    return
-                                }
-                                openFileInput(fileNameWithId.value).use { inputStream ->
-                                    val buffer = ByteArray(4096)
-                                    var bytesRead: Int
-                                    while (inputStream?.read(buffer).also {
-                                            bytesRead = it ?: -1
-                                        } != -1) {
-                                        val result =
-                                            bulkTransfer(endpoint, buffer, bytesRead, TIMEOUT)
-                                        if (result >= 0) {
-                                            Log.d(
-                                                TAG,
-                                                "Данные успешно отправлены: $result байт"
-                                            )
-                                        } else {
-                                            Log.e(TAG, "Не удалось отправить данные")
-                                            logger.error("Не удалось отправить данные для файла \"${fileNameWithId.value}\"")
-                                            break
-                                        }
-                                    }
-                                    logger.info("Файл \"${fileNameWithId.value}\" успешно отправлен на печать")
+                            if (filesNameWithId.isNotEmpty()) {
+                                filesNameWithId.entries.forEachIndexed { index, fileNameWithId ->
                                     when (val result = fileUseCases.putStatus(
                                         fileId = fileNameWithId.key,
-                                        PRINT_FILE_STATUS
+                                        GET_FILE_STATUS
                                     )) {
                                         is Result.Error -> logger.error(
-                                            "Ошибка отправки статуса 3: ${result.exception.message ?: "Unknown error"} "
+                                            "Ошибка отправки статуса 2: ${result.exception.message ?: "Unknown error"} "
                                         )
 
                                         is Result.Success -> {}
                                     }
-                                    val deleted = file.delete()
-                                    if (deleted) {
-                                        logger.info("Файл \"${fileNameWithId.value}\" удален")
-                                        println("File \"${fileNameWithId.value}\" deleted immediately.")
-                                    } else {
-                                        logger.error("Ошибка удаления файла \"${fileNameWithId.value}\"")
-                                        println("Failed ${fileNameWithId.value} to delete file.")
+                                    NotificationHelper.updateNotification(
+                                        context = this@PrintService,
+                                        contentText = "Печать файла ${fileNameWithId.value}"
+                                    )
+                                    logger.info("Печать файла \"${fileNameWithId.value}\"")
+                                    val file = File(filesDir, fileNameWithId.value)
+                                    if (!file.exists()) {
+                                        logger.error("Файл с именем \"${fileNameWithId.value}\" не существует")
+                                        return
+                                    }
+                                    openFileInput(fileNameWithId.value).use { inputStream ->
+                                        val buffer = ByteArray(4096)
+                                        var bytesRead: Int
+                                        while (inputStream?.read(buffer).also {
+                                                bytesRead = it ?: -1
+                                            } != -1) {
+                                            val result =
+                                                bulkTransfer(endpoint, buffer, bytesRead, TIMEOUT)
+                                            if (result >= 0) {
+                                                Log.d(
+                                                    TAG,
+                                                    "Данные успешно отправлены: $result байт"
+                                                )
+                                            } else {
+                                                Log.e(TAG, "Не удалось отправить данные")
+                                                logger.error("Не удалось отправить данные для файла \"${fileNameWithId.value}\"")
+                                                break
+                                            }
+                                        }
+                                        logger.info("Файл \"${fileNameWithId.value}\" успешно отправлен на печать")
+                                        when (val result = fileUseCases.putStatus(
+                                            fileId = fileNameWithId.key,
+                                            PRINT_FILE_STATUS
+                                        )) {
+                                            is Result.Error -> logger.error(
+                                                "Ошибка отправки статуса 3: ${result.exception.message ?: "Unknown error"} "
+                                            )
+
+                                            is Result.Success -> {}
+                                        }
+                                        val deleted = file.delete()
+                                        if (deleted) {
+                                            logger.info("Файл \"${fileNameWithId.value}\" удален")
+                                            println("File \"${fileNameWithId.value}\" deleted immediately.")
+                                        } else {
+                                            logger.error("Ошибка удаления файла \"${fileNameWithId.value}\"")
+                                            println("Failed ${fileNameWithId.value} to delete file.")
+                                        }
+                                    }
+                                    if (index < filesNameWithId.size - 1) {
+                                        delay(6000L)
                                     }
                                 }
-                                if (index < filesNameWithId.size - 1) {
-                                    delay(6000L)
-                                }
+                                logger.info("Конец печати...")
+                                NotificationHelper.updateNotification(
+                                    context = this@PrintService,
+                                    contentText = "Конец печати..."
+                                )
+                            }else{
+                                logger.info("Получено 0 файлов")
+                                NotificationHelper.updateNotification(
+                                    context = this@PrintService,
+                                    contentText = "Получено 0 файлов..."
+                                )
                             }
                         } catch (e: IOException) {
                             Log.e(TAG, "Error:a ${e.message} ", e)
